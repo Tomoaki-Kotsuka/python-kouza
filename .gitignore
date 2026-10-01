@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# ノートブックや VBA を実行してできる出力
+地区別/
+地区別.zip
+地区別_VBA/
+
+# Excel の一時ファイルと、マクロを貼り付けた作業用ブック
+~$*
+*.xlsm
