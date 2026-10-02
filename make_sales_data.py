@@ -57,10 +57,13 @@ def make_sales_data(path="sales_data.xlsx", seed=42):
         ("シュレッダー", "オフィス機器", 28000),
         ("ラベルプリンター", "オフィス機器", 15800),
     ]
-    # 月ごとの営業日数(2023年4月〜2026年4月の37か月ぶん。平日の数から祝日を引いたもの。最後の1つは「来月」)
-    workdays = [20, 20, 22, 20, 22, 20, 21, 20, 21, 21, 19, 20, 21, 21, 20, 22, 21, 19, 22, 20, 22, 21, 18, 20, 21, 20, 21, 22, 20, 20, 22, 18, 23, 20, 18, 21, 21]
-    # 来月(2026年4月)にキャンペーンを予定している地区
-    next_campaign = ["仙台", "金沢", "福岡", "那覇"]
+    # 来月(2026年4月)の予定: 地区ごとの (訪問予定件数, 広告費の予算[万円])
+    next_plan = {
+        "札幌": (42, 25), "仙台": (55, 45), "新潟": (38, 20), "金沢": (58, 43), "長野": (45, 30),
+        "宇都宮": (33, 18), "さいたま": (60, 28), "千葉": (46, 52), "東京": (72, 22), "横浜": (40, 35),
+        "静岡": (36, 15), "名古屋": (64, 30), "京都": (44, 46), "大阪": (35, 55), "神戸": (30, 24),
+        "岡山": (41, 12), "広島": (56, 33), "高松": (28, 26), "福岡": (66, 50), "那覇": (54, 44),
+    }
     # 基本の列の並びを決める
     columns = ["売上日", "地区", "担当者", "商品名", "カテゴリ", "単価", "数量", "売上金額"]
     # シートごとの列の並び(2・3シート目はわざとバラバラにする)
@@ -71,7 +74,7 @@ def make_sales_data(path="sales_data.xlsx", seed=42):
     }
     # 年度ごとの明細を入れる箱を用意する
     rows = {2023: [], 2024: [], 2025: []}
-    # 月次データ(年月・地区・営業日数・キャンペーン)を入れる箱を用意する
+    # 月次データ(年月・地区・訪問件数・広告費)を入れる箱を用意する
     cond_rows = []
     # 2023年4月から数えて何か月目かを数える数字(最初は 0)
     t = 0
@@ -89,34 +92,30 @@ def make_sales_data(path="sales_data.xlsx", seed=42):
             last_day = calendar.monthrange(year, month)[1]
             # 「2023-04」のような年月の文字を作る
             ym = str(year) + "-" + str(month).zfill(2)
-            # その月の営業日数を取り出す
-            days = workdays[t]
             # 地区を1つずつ取り出してくり返す
             for area in areas:
                 # その地区の設定を取り出す
                 base, n_base, staff = areas[area]
-                # キャンペーンは、まず「なし(0)」にしておく
-                campaign = 0
-                # 3割くらいの確率で
-                if rng.random() < 0.3:
-                    # キャンペーン「あり(1)」にする
-                    campaign = 1
+                # その月に営業担当が顧客を訪問した件数を決める(20〜80件)
+                visits = rng.randint(20, 80)
+                # その月に使った広告費を決める(10〜60万円)
+                ad_cost = rng.randint(10, 60)
                 # 条件による売上の倍率は、まず 1.00 倍(ふつうの月)にしておく
                 effect = 1.00
-                # 営業日数が多い(21日以上)だけなら
-                if days >= 21 and campaign == 0:
+                # 訪問件数が多い(50件以上)だけなら
+                if visits >= 50 and ad_cost < 40:
                     # 少しだけ増える
                     effect = 1.08
-                # キャンペーンありだけなら
-                if days < 21 and campaign == 1:
+                # 広告費が多い(40万円以上)だけなら
+                if visits < 50 and ad_cost >= 40:
                     # 少しだけ増える
                     effect = 1.10
-                # 営業日数が多い月にキャンペーンが重なると
-                if days >= 21 and campaign == 1:
+                # 訪問件数も広告費も多い月は
+                if visits >= 50 and ad_cost >= 40:
                     # 売上がはっきり跳ねる
                     effect = 1.50
                 # 月次データに1行追加する
-                cond_rows.append([ym, area, days, campaign])
+                cond_rows.append([ym, area, visits, ad_cost])
                 # その月の売上の目安 = 規模 × 条件による倍率 × 少しのゆらぎ
                 target = base * 10000 * effect * rng.gauss(1, 0.05)
                 # その月の明細件数を決める(目安から -1〜+1 件ゆらす)
@@ -155,14 +154,10 @@ def make_sales_data(path="sales_data.xlsx", seed=42):
             t = t + 1
     # 来月(2026年4月)の予定を、地区ごとに月次データへ追加する
     for area in areas:
-        # キャンペーン予定は、まず「なし(0)」にしておく
-        campaign = 0
-        # 予定している地区なら
-        if area in next_campaign:
-            # 「あり(1)」にする
-            campaign = 1
+        # その地区の訪問予定件数と広告費の予算を取り出す
+        visits, ad_cost = next_plan[area]
         # 月次データに1行追加する(売上はまだ無い)
-        cond_rows.append(["2026-04", area, workdays[36], campaign])
+        cond_rows.append(["2026-04", area, visits, ad_cost])
     # Excel ファイルを書き込み用に開く
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         # 年度ごとに1シートずつ書き込む
@@ -192,7 +187,7 @@ def make_sales_data(path="sales_data.xlsx", seed=42):
             # 商品名の列だけさらに広げる
             writer.sheets[sheet_name].column_dimensions[name_letter].width = 26
         # 月次データの箱の中身を表にする
-        df_cond = pd.DataFrame(cond_rows, columns=["年月", "地区", "営業日数", "キャンペーン"])
+        df_cond = pd.DataFrame(cond_rows, columns=["年月", "地区", "訪問件数", "広告費(万円)"])
         # 4枚目のシート「月次データ」に書き込む
         df_cond.to_excel(writer, sheet_name="月次データ", index=False)
         # A〜D 列を1つずつ取り出してくり返す
