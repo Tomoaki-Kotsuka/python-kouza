@@ -91,6 +91,8 @@
 - `sales_data.xlsx` を Mac 上のふつうのフォルダに置く。OneDrive / iCloud Drive / SharePoint 上のフォルダは避ける(保存先を作れないため、マクロがメッセージを出して止まる)
 - Excel で新しい空のブックを作る
 - メニューバーの「ツール → マクロ → Visual Basic Editor」で VBE を開く(「開発」タブを使う場合は「Excel → 環境設定 → リボンとツールバー」で「開発」にチェックを入れ、「開発 → Visual Basic」)
+- Mac では先に補助スクリプトを1回だけ入れておく(Mac 版の VBA は日本語のフォルダ名を作れないため、フォルダ作成をこのスクリプトに任せている)。ターミナルで次を実行する
+    - `mkdir -p ~/Library/Application\ Scripts/com.microsoft.Excel && osacompile -o ~/Library/Application\ Scripts/com.microsoft.Excel/PythonKouza.scpt PythonKouza.applescript`
 - VBE の「挿入 → 標準モジュール」で空のモジュールを作る
 - `split_by_area.txt` をテキストエディット(または VS Code)で開き、全部コピーしてモジュールに貼り付ける
 - Excel に戻り、「ファイル → 名前を付けて保存」でファイル形式を「Excel マクロ有効ブック (.xlsm)」にして、`sales_data.xlsx` と同じフォルダに `split_by_area.xlsm` として保存する

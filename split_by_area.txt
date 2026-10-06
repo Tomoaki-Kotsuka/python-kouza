@@ -234,15 +234,25 @@ Cleanup:
 End Sub
 
 ' フォルダを作る(すでにある場合は何もしない)
+' Mac 版の VBA は日本語のフォルダ名を MkDir で作れないため、
+' 補助スクリプト PythonKouza.scpt(~/Library/Application Scripts/com.microsoft.Excel/)に作ってもらう
 Private Sub MakeFolder(ByVal folderPath As String)
     On Error Resume Next
+#If Mac Then
+    AppleScriptTask "PythonKouza.scpt", "MakeFolder", folderPath
+#Else
     MkDir folderPath
+#End If
     On Error GoTo 0
 End Sub
 
-' フォルダがあるかを調べる(Mac の Dir は日本語のパスで不安定なので GetAttr を使う)
+' フォルダがあるかを調べる(Mac は日本語のパスを扱えるよう補助スクリプトで調べる)
 Private Function FolderExists(ByVal folderPath As String) As Boolean
     On Error Resume Next
+#If Mac Then
+    FolderExists = (AppleScriptTask("PythonKouza.scpt", "FolderExists", folderPath) = "1")
+#Else
     FolderExists = ((GetAttr(folderPath) And vbDirectory) = vbDirectory)
+#End If
     On Error GoTo 0
 End Function
